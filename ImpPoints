@@ -1,0 +1,20 @@
+1  if u want to run core-service, run docker compose up core-service
+2. But since core-service need mysql connection, run this first : docker compose up -d mysql rabbitmq(optional)
+3. if u don't want that hectic add this in docker-compose file :
+depends_on:
+  -sql
+  -rabbitmq
+
+4. if u want to run core-service, run docker compose up email-service(this already has depends on added)
+-----------
+Run Infra Separately (Professional Way)
+
+First start infra:
+docker compose up -d mysql rabbitmq
+Then run:
+docker compose up core-service
+Since infra is already running, Docker won’t recreate them.
+
+-------------
+
+
