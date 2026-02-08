@@ -4,13 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import in.utkarshsingh.money.manager.config.RabbitMQConfig;
 import in.utkarshsingh.money.manager.dto.AuthDTO;
+import in.utkarshsingh.money.manager.dto.JwtResponseDTO;
 import in.utkarshsingh.money.manager.dto.ProfileDTO;
+import in.utkarshsingh.money.manager.dto.UserPublicDTO;
 import in.utkarshsingh.money.manager.entity.OutboxEvent;
 import in.utkarshsingh.money.manager.entity.ProfileEntity;
+import in.utkarshsingh.money.manager.enums.ErrorCode;
 import in.utkarshsingh.money.manager.enums.EventStatus;
 import in.utkarshsingh.money.manager.event.ProfileActivationEvent;
-import in.utkarshsingh.money.manager.exceptions.EmailAlreadyExistsException;
-import in.utkarshsingh.money.manager.exceptions.ProfileRegistrationException;
+import in.utkarshsingh.money.manager.exceptions.*;
 import in.utkarshsingh.money.manager.repository.OutboxRepository;
 import in.utkarshsingh.money.manager.repository.ProfileRepository;
 import in.utkarshsingh.money.manager.util.JwtUtil;
@@ -19,15 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -203,11 +204,100 @@ public class ProfileService {
                 .orElseThrow(() -> new BadRequestException("Invalid activation token"));
     }
 
-    public boolean isAccountActive(String email) {
-        return profileRepository.findByEmail(email)
-                .map(ProfileEntity::getIsActive)
-                .orElse(false);
+//    public boolean isAccountActive(String email) {
+//        return profileRepository.findByEmail(email)
+//                .map(ProfileEntity::getIsActive)
+//                .orElse(false);
+//    }
+
+    @Transactional(readOnly = true)
+    public JwtResponseDTO login(AuthDTO authDTO) {
+
+        String email = authDTO.getEmail();
+        log.info("Login attempt for email: {}", email);
+
+        //Check if user exist
+        ProfileEntity profile = profileRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.warn("Login failed - email not registered: {}", email);
+                    return new UserNotFoundException(email);
+                });
+
+
+        //Check if he has activated his account
+        if (!Boolean.TRUE.equals(profile.getIsActive())) {
+            log.warn("Login failed - account not active: {}", email);
+            throw new AccountNotActiveException(email);
+        }
+
+        // Step 1: Authenticate using Spring Security
+        authenticateUser(email, authDTO.getPassword());
+
+        // Step 2: Load profile after successful authentication
+//        ProfileEntity profile = profileRepository.findByEmail(email)
+//                .orElseThrow(InvalidCredentialsException::new);
+
+        log.info("Login successful for email: {}", email);
+
+        // Step 3: Generate JWT response
+        return generateJwtResponse(profile);
     }
+
+    /**
+     * Handles Spring Security authentication and maps exceptions
+     */
+    private void authenticateUser(String email, String password) {
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password)
+            );
+
+        } catch (BadCredentialsException ex) {
+
+            log.warn("Authentication failed - invalid credentials for: {}", email);
+            throw new InvalidCredentialsException();
+
+        } catch (DisabledException ex) {
+
+            log.warn("Authentication failed - account disabled for: {}", email);
+            throw new AccountNotActiveException(email);
+
+        } catch (LockedException ex) {
+
+            log.warn("Authentication failed - account locked for: {}", email);
+            throw new AccountLockedException();
+
+        } catch (AuthenticationException ex) {
+
+            log.warn("Authentication failed for: {}", email, ex);
+            throw new InvalidCredentialsException();
+        }
+    }
+
+    /**
+     * Generates JWT and response DTO
+     */
+    private JwtResponseDTO generateJwtResponse(ProfileEntity profile) {
+
+        String accessToken = jwtUtil.generateToken(profile.getEmail());
+
+        return JwtResponseDTO.builder()
+                .accessToken(accessToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtUtil.getExpirationTime())
+                .user(
+                        UserPublicDTO.builder()
+                                .id(profile.getId())
+                                .fullName(profile.getFullName())
+                                .email(profile.getEmail())
+                                .profileImageUrl(profile.getProfileImageUrl())
+                                .build()
+                )
+                .build();
+    }
+
+
 
     public ProfileEntity getCurrentProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -234,17 +324,20 @@ public class ProfileService {
                 .build();
     }
 
-    public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
-        try {
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authDTO.getEmail(), authDTO.getPassword()));
-            //Generate JWT token
-            String token = jwtUtil.generateToken(authDTO.getEmail());
-            return Map.of(
-                    "token", token,
-                    "user", getPublicProfile(authDTO.getEmail())
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Invalid email or password");
-        }
-    }
+//    public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
+//        try {
+//            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authDTO.getEmail(), authDTO.getPassword()));
+//            //Generate JWT token
+//            String token = jwtUtil.generateToken(authDTO.getEmail());
+//            return Map.of(
+//                    "token", token,
+//                    "user", getPublicProfile(authDTO.getEmail())
+//            );
+//        } catch (Exception e) {
+//            throw new RuntimeException("Invalid email or password");
+//        }
+//    }
+
+
+
 }

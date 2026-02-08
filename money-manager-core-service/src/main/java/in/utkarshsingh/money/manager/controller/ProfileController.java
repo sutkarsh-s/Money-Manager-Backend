@@ -1,6 +1,7 @@
 package in.utkarshsingh.money.manager.controller;
 
 import in.utkarshsingh.money.manager.dto.AuthDTO;
+import in.utkarshsingh.money.manager.dto.JwtResponseDTO;
 import in.utkarshsingh.money.manager.dto.ProfileDTO;
 import in.utkarshsingh.money.manager.service.ProfileService;
 import lombok.RequiredArgsConstructor;
@@ -32,22 +33,30 @@ public class ProfileController {
         }
     }
 
+//    @PostMapping("/login")
+//    public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDTO authDTO) {
+//        try {
+//            if (!profileService.isAccountActive(authDTO.getEmail())) {
+//                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+//                        "message", "Account is not active. Please activate your account first."
+//                ));
+//            }
+//            Map<String, Object> response = profileService.authenticateAndGenerateToken(authDTO);
+//            return ResponseEntity.ok(response);
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+//                    "message", e.getMessage()
+//            ));
+//        }
+//    }
+
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDTO authDTO) {
-        try {
-//            if()
-            if (!profileService.isAccountActive(authDTO.getEmail())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                        "message", "Account is not active. Please activate your account first."
-                ));
-            }
-            Map<String, Object> response = profileService.authenticateAndGenerateToken(authDTO);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "message", e.getMessage()
-            ));
-        }
+    public ResponseEntity<JwtResponseDTO> login(
+             @RequestBody AuthDTO authDTO) {
+
+        JwtResponseDTO response = profileService.login(authDTO);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/profile")
