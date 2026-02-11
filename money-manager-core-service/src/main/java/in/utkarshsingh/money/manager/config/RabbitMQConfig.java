@@ -2,7 +2,6 @@ package in.utkarshsingh.money.manager.config;
 
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -12,11 +11,6 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     public static final String PROFILE_ACTIVATION_QUEUE = "profile-activation-queue";
-
-    @Bean
-    public Queue profileActivationQueue() {
-        return new Queue(PROFILE_ACTIVATION_QUEUE, true);
-    }
 
     @Bean
     public MessageConverter jsonMessageConverter() {

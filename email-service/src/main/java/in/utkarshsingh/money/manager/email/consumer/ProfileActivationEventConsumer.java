@@ -1,14 +1,19 @@
 package in.utkarshsingh.money.manager.email.consumer;
 
 import in.utkarshsingh.money.manager.email.config.RabbitMQConfig;
+import in.utkarshsingh.money.manager.email.entity.EmailOutbox;
 import in.utkarshsingh.money.manager.email.entity.ProcessedMessage;
+import in.utkarshsingh.money.manager.email.enums.EmailStatus;
+import in.utkarshsingh.money.manager.email.event.OutboxCreatedEvent;
 import in.utkarshsingh.money.manager.email.event.ProfileActivationEvent;
+import in.utkarshsingh.money.manager.email.repository.EmailOutboxRepository;
 import in.utkarshsingh.money.manager.email.repository.ProcessedMessageRepository;
 import in.utkarshsingh.money.manager.email.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,8 +27,9 @@ import java.time.LocalDateTime;
 @Slf4j
 public class ProfileActivationEventConsumer {
 
-    private final EmailService emailService;
     private final ProcessedMessageRepository processedMessageRepository;
+    private final EmailOutboxRepository emailOutboxRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.activation.url}")
     private String activationUrl;
@@ -40,7 +46,7 @@ public class ProfileActivationEventConsumer {
 
         try {
 
-            // 🔐 Idempotency Check
+            // Idempotency check
             if (processedMessageRepository.existsById(eventId)) {
                 log.warn("Duplicate message ignored: {}", eventId);
                 channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
@@ -58,9 +64,23 @@ public class ProfileActivationEventConsumer {
                     + activationLink + "\n\n"
                     + "If you did not register, please ignore this email.";
 
-            emailService.sendEmail(event.getEmail(), subject, body);
+            // 🟢 Save email in OUTBOX (not send)
+            EmailOutbox outbox = emailOutboxRepository.save(
+                    EmailOutbox.builder()
+                            .eventId(eventId)
+                            .recipient(event.getEmail())
+                            .subject(subject)
+                            .body(body)
+                            .status(EmailStatus.PENDING)
+                            .createdAt(LocalDateTime.now())
+                            .build()
+            );
 
-            // Save processed message (same transaction)
+            //publishing event Instead of polling constantly in processPendingBatch in EmailOutboxProcessor,
+            // used Spring event to Trigger processor after insert and still keep scheduled fallback
+            eventPublisher.publishEvent(new OutboxCreatedEvent(outbox.getId()));
+
+            // Save processed message
             processedMessageRepository.save(
                     ProcessedMessage.builder()
                             .eventId(eventId)
@@ -68,18 +88,17 @@ public class ProfileActivationEventConsumer {
                             .build()
             );
 
-            // ACK only after DB + Email success
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
 
-            log.info("Activation email processed successfully: {}", eventId);
+            log.info("Activation event stored in outbox: {}", eventId);
 
         } catch (Exception ex) {
 
             log.error("Failed processing event: {}", eventId, ex);
 
-            // Reject and send to DLQ
             channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
         }
     }
+
 }
 

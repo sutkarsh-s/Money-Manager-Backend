@@ -9,7 +9,6 @@ import in.utkarshsingh.money.manager.dto.ProfileDTO;
 import in.utkarshsingh.money.manager.dto.UserPublicDTO;
 import in.utkarshsingh.money.manager.entity.OutboxEvent;
 import in.utkarshsingh.money.manager.entity.ProfileEntity;
-import in.utkarshsingh.money.manager.enums.ErrorCode;
 import in.utkarshsingh.money.manager.enums.EventStatus;
 import in.utkarshsingh.money.manager.event.ProfileActivationEvent;
 import in.utkarshsingh.money.manager.exceptions.*;

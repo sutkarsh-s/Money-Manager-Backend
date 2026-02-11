@@ -18,3 +18,12 @@ Since infra is already running, Docker won’t recreate them.
 -------------
 
 
+REGARDING RABBITMQ:
+IMP: run email service first then core(yet to figure out the rreson for solving this issue)
+Fix for the PRECONDITION_FAILED
+Right now the error still means: one declaration of profile-activation-queue has x-dead-letter-exchange='', and another declaration has no x-dead-letter-exchange at all.
+To eliminate this completely, I’ve changed the setup so that:
+Only email-service (the consumer) declares the queue and DLQ.
+core-service (the publisher) no longer declares any queues at all – it just uses RabbitTemplate to send to the queue by name.
+
+
