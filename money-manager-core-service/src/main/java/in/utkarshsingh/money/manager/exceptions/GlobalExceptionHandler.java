@@ -60,6 +60,20 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(message, errorCode, traceId);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgumentException(IllegalArgumentException ex) {
+        String traceId = generateTraceId();
+        ErrorCode errorCode = ErrorCode.VALIDATION_ERROR;
+
+        log.warn(
+                "IllegalArgumentException | traceId={} | message={}",
+                traceId,
+                ex.getMessage()
+        );
+
+        return buildErrorResponse(ex.getMessage(), errorCode, traceId);
+    }
+
     /**
      * Handles database constraint violations
      */
