@@ -2,24 +2,20 @@ package in.utkarshsingh.money.manager.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import in.utkarshsingh.money.manager.config.RabbitMQConfig;
 import in.utkarshsingh.money.manager.dto.AuthDTO;
 import in.utkarshsingh.money.manager.dto.JwtResponseDTO;
 import in.utkarshsingh.money.manager.dto.ProfileDTO;
 import in.utkarshsingh.money.manager.dto.UserPublicDTO;
-import in.utkarshsingh.money.manager.entity.OutboxEvent;
 import in.utkarshsingh.money.manager.entity.ProfileEntity;
-import in.utkarshsingh.money.manager.enums.EventStatus;
 import in.utkarshsingh.money.manager.event.ProfileActivationEvent;
 import in.utkarshsingh.money.manager.exceptions.*;
-import in.utkarshsingh.money.manager.repository.OutboxRepository;
+import in.utkarshsingh.money.manager.domain.OutboxEventFactory;
+import in.utkarshsingh.money.manager.port.OutboxEventStore;
 import in.utkarshsingh.money.manager.repository.ProfileRepository;
 import in.utkarshsingh.money.manager.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -28,8 +24,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -41,10 +37,9 @@ public class ProfileService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-    private final RabbitTemplate rabbitTemplate;
+    private final OutboxEventStore outboxEventStore;
+    private final OutboxEventFactory outboxEventFactory;
     private final ObjectMapper objectMapper;
-
-    private final OutboxRepository outboxRepository;
 
 
 //    @Transactional
@@ -117,32 +112,17 @@ public class ProfileService {
     }
 
     private void createOutboxEvent(ProfileEntity profile) {
-
-        try {
-            ProfileActivationEvent event = ProfileActivationEvent.builder()
-                    .eventId(UUID.randomUUID().toString())
-                    .email(profile.getEmail())
-                    .fullName(profile.getFullName())
-                    .activationToken(profile.getActivationToken())
-                    .build();
-
-            OutboxEvent outbox = OutboxEvent.builder()
-                    .eventId(event.getEventId())
-                    .aggregateType("PROFILE")
-                    .eventType("PROFILE_ACTIVATION")
-                    .payload(convertToJson(event))
-                    .status(EventStatus.PENDING)
-                    .retryCount(0)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            outboxRepository.save(outbox);
-
-        } catch (Exception ex) {
-            throw new RuntimeException("Failed to create outbox event", ex);
-        }
+        ProfileActivationEvent event = ProfileActivationEvent.builder()
+                .eventId(UUID.randomUUID().toString())
+                .email(profile.getEmail())
+                .fullName(profile.getFullName())
+                .activationToken(profile.getActivationToken())
+                .build();
+        String payloadJson = toJson(event);
+        outboxEventStore.save(outboxEventFactory.createProfileActivationOutboxEvent(event, payloadJson));
     }
-    private String convertToJson(Object object) {
+
+    private String toJson(Object object) {
         try {
             return objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
@@ -151,23 +131,6 @@ public class ProfileService {
     }
 
 
-
-    private void publishActivationEvent(ProfileEntity profile) {
-        try {
-            ProfileActivationEvent event = ProfileActivationEvent.builder()
-                    .email(profile.getEmail())
-                    .fullName(profile.getFullName())
-                    .activationToken(profile.getActivationToken())
-                    .build();
-
-            rabbitTemplate.convertAndSend(RabbitMQConfig.PROFILE_ACTIVATION_QUEUE, event);
-            log.info("Activation event published successfully for email: {}", profile.getEmail());
-
-        } catch (Exception ex) {
-            log.error("Failed to publish activation event for email: {}", profile.getEmail(), ex);
-            throw new ProfileRegistrationException("Profile created but failed to publish activation event");
-        }
-    }
 
     public ProfileEntity toEntity(ProfileDTO profileDTO) {
         return ProfileEntity.builder()
