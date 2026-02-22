@@ -3,16 +3,15 @@ package in.utkarshsingh.money.manager.service;
 import in.utkarshsingh.money.manager.dto.ExpenseDTO;
 import in.utkarshsingh.money.manager.dto.IncomeDTO;
 import in.utkarshsingh.money.manager.dto.RecentTransactionDTO;
+import in.utkarshsingh.money.manager.dto.response.DashboardResponse;
 import in.utkarshsingh.money.manager.entity.ProfileEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Stream.concat;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -22,51 +21,55 @@ public class DashboardService {
     private final ExpenseService expenseService;
     private final ProfileService profileService;
 
-    public Map<String, Object> getDashboardData() {
+    @Transactional(readOnly = true)
+    public DashboardResponse getDashboardData() {
         ProfileEntity profile = profileService.getCurrentProfile();
-        Map<String, Object> returnValue = new LinkedHashMap<>();
+
         List<IncomeDTO> latestIncomes = incomeService.getLatest5IncomesForCurrentUser();
         List<ExpenseDTO> latestExpenses = expenseService.getLatest5ExpensesForCurrentUser();
-        List<RecentTransactionDTO> recentTransactions = concat(latestIncomes.stream().map(income ->
-                        RecentTransactionDTO.builder()
-                                .id(income.getId())
-                                .profileId(profile.getId())
-                                .icon(income.getIcon())
-                                .name(income.getName())
-                                .amount(income.getAmount())
-                                .date(income.getDate())
-                                .createdAt(income.getCreatedAt())
-                                .updatedAt(income.getUpdatedAt())
-                                .type("income")
-                                .build()),
-                latestExpenses.stream().map(expense ->
-                        RecentTransactionDTO.builder()
-                                .id(expense.getId())
-                                .profileId(profile.getId())
-                                .icon(expense.getIcon())
-                                .name(expense.getName())
-                                .amount(expense.getAmount())
-                                .date(expense.getDate())
-                                .createdAt(expense.getCreatedAt())
-                                .updatedAt(expense.getUpdatedAt())
-                                .type("expense")
-                                .build()))
-                .sorted((a, b) -> {
-                    int cmp = b.getDate().compareTo(a.getDate());
-                    if (cmp == 0 && a.getCreatedAt() != null && b.getCreatedAt() != null) {
-                        return b.getCreatedAt().compareTo(a.getCreatedAt());
-                    }
-                    return cmp;
-                }).collect(Collectors.toList());
-        returnValue.put("totalBalance",
-                incomeService.getTotalIncomeForCurrentUser()
-                        .subtract(expenseService.getTotalExpenseForCurrentUser()));
-        returnValue.put("totalIncome", incomeService.getTotalIncomeForCurrentUser());
-        returnValue.put("totalExpense", expenseService.getTotalExpenseForCurrentUser());
-        returnValue.put("recent5Expenses", latestExpenses);
-        returnValue.put("recent5Incomes", latestIncomes);
-        returnValue.put("recentTransactions", recentTransactions);
-        return returnValue;
+
+        List<RecentTransactionDTO> recentTransactions = buildRecentTransactions(profile.getId(), latestIncomes, latestExpenses);
+
+        return DashboardResponse.builder()
+                .totalBalance(incomeService.getTotalIncomeForCurrentUser()
+                        .subtract(expenseService.getTotalExpenseForCurrentUser()))
+                .totalIncome(incomeService.getTotalIncomeForCurrentUser())
+                .totalExpense(expenseService.getTotalExpenseForCurrentUser())
+                .recent5Incomes(latestIncomes)
+                .recent5Expenses(latestExpenses)
+                .recentTransactions(recentTransactions)
+                .build();
     }
 
+    private List<RecentTransactionDTO> buildRecentTransactions(Long profileId,
+                                                               List<IncomeDTO> incomes,
+                                                               List<ExpenseDTO> expenses) {
+        return Stream.concat(
+                incomes.stream().map(i -> RecentTransactionDTO.builder()
+                        .id(i.getId())
+                        .profileId(profileId)
+                        .icon(i.getIcon())
+                        .name(i.getName())
+                        .amount(i.getAmount())
+                        .date(i.getDate())
+                        .createdAt(i.getCreatedAt())
+                        .updatedAt(i.getUpdatedAt())
+                        .type("income")
+                        .build()),
+                expenses.stream().map(e -> RecentTransactionDTO.builder()
+                        .id(e.getId())
+                        .profileId(profileId)
+                        .icon(e.getIcon())
+                        .name(e.getName())
+                        .amount(e.getAmount())
+                        .date(e.getDate())
+                        .createdAt(e.getCreatedAt())
+                        .updatedAt(e.getUpdatedAt())
+                        .type("expense")
+                        .build())
+        ).sorted(Comparator.comparing(RecentTransactionDTO::getDate)
+                .thenComparing(RecentTransactionDTO::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .reversed()
+        ).toList();
+    }
 }

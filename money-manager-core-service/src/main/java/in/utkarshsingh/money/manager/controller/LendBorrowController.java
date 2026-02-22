@@ -2,9 +2,11 @@ package in.utkarshsingh.money.manager.controller;
 
 import in.utkarshsingh.money.manager.dto.LendBorrowDTO;
 import in.utkarshsingh.money.manager.dto.PageResponseDTO;
+import in.utkarshsingh.money.manager.dto.request.LendBorrowRequest;
 import in.utkarshsingh.money.manager.enums.LendBorrowStatus;
 import in.utkarshsingh.money.manager.enums.LendBorrowType;
 import in.utkarshsingh.money.manager.service.LendBorrowService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +20,8 @@ public class LendBorrowController {
     private final LendBorrowService lendBorrowService;
 
     @PostMapping
-    public ResponseEntity<LendBorrowDTO> create(@RequestBody LendBorrowDTO dto) {
-        LendBorrowDTO saved = lendBorrowService.create(dto);
+    public ResponseEntity<LendBorrowDTO> create(@Valid @RequestBody LendBorrowRequest request) {
+        LendBorrowDTO saved = lendBorrowService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 

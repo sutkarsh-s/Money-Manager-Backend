@@ -22,6 +22,7 @@ public class CategoryEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Column(updatable = false)
@@ -31,13 +32,13 @@ public class CategoryEntity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(nullable = false, length = 20)
     private String type;
 
+    @Column(length = 50)
     private String icon;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id", nullable = false)
     private ProfileEntity profile;
-
-
 }

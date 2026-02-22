@@ -31,16 +31,13 @@ public class EmailService {
             backoff = @Backoff(delay = 3000)
     )
     public void sendEmail(String to, String subject, String body) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
-            mailSender.send(message);
-        }catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(body);
+        mailSender.send(message);
+        log.info("Email sent to: {}", to);
     }
     @Recover
     public void recover(MailException ex, String to, String subject, String body) {

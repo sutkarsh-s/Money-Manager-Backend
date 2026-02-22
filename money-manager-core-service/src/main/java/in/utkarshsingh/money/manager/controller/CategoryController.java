@@ -1,7 +1,9 @@
 package in.utkarshsingh.money.manager.controller;
 
 import in.utkarshsingh.money.manager.dto.CategoryDTO;
+import in.utkarshsingh.money.manager.dto.request.CategoryRequest;
 import in.utkarshsingh.money.manager.service.CategoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +19,8 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    public ResponseEntity<CategoryDTO> saveCategory(@RequestBody CategoryDTO categoryDTO) {
-        CategoryDTO savedCategory = categoryService.saveCategory(categoryDTO);
+    public ResponseEntity<CategoryDTO> saveCategory(@Valid @RequestBody CategoryRequest request) {
+        CategoryDTO savedCategory = categoryService.saveCategory(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedCategory);
     }
 
@@ -36,8 +38,8 @@ public class CategoryController {
 
     @PutMapping("/{categoryId}")
     public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Long categoryId,
-                                                    @RequestBody CategoryDTO categoryDTO) {
-        CategoryDTO updatedCategory = categoryService.updateCategory(categoryId, categoryDTO);
+                                                      @Valid @RequestBody CategoryRequest request) {
+        CategoryDTO updatedCategory = categoryService.updateCategory(categoryId, request);
         return ResponseEntity.ok(updatedCategory);
     }
 }

@@ -1,15 +1,15 @@
 package in.utkarshsingh.money.manager.controller;
 
-import in.utkarshsingh.money.manager.dto.AuthDTO;
 import in.utkarshsingh.money.manager.dto.JwtResponseDTO;
 import in.utkarshsingh.money.manager.dto.ProfileDTO;
+import in.utkarshsingh.money.manager.dto.request.LoginRequest;
+import in.utkarshsingh.money.manager.dto.request.RegisterRequest;
 import in.utkarshsingh.money.manager.service.ProfileService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -18,44 +18,20 @@ public class ProfileController {
     private final ProfileService profileService;
 
     @PostMapping("/register")
-    public ResponseEntity<ProfileDTO> registerProfile(@RequestBody ProfileDTO profileDTO) {
-        ProfileDTO registeredProfile = profileService.registerProfile(profileDTO);
+    public ResponseEntity<ProfileDTO> registerProfile(@Valid @RequestBody RegisterRequest request) {
+        ProfileDTO registeredProfile = profileService.registerProfile(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(registeredProfile);
     }
 
     @GetMapping("/activate")
-    public ResponseEntity<String> activateProfile(@RequestParam String token) throws Exception {
-        boolean isActivated = profileService.activateProfile(token);
-        if (isActivated) {
-            return ResponseEntity.ok("Profile activated successfully");
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activation token not found or already used");
-        }
+    public ResponseEntity<String> activateProfile(@RequestParam String token) {
+        profileService.activateProfile(token);
+        return ResponseEntity.ok("Profile activated successfully");
     }
 
-//    @PostMapping("/login")
-//    public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDTO authDTO) {
-//        try {
-//            if (!profileService.isAccountActive(authDTO.getEmail())) {
-//                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-//                        "message", "Account is not active. Please activate your account first."
-//                ));
-//            }
-//            Map<String, Object> response = profileService.authenticateAndGenerateToken(authDTO);
-//            return ResponseEntity.ok(response);
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-//                    "message", e.getMessage()
-//            ));
-//        }
-//    }
-
     @PostMapping("/login")
-    public ResponseEntity<JwtResponseDTO> login(
-             @RequestBody AuthDTO authDTO) {
-
-        JwtResponseDTO response = profileService.login(authDTO);
-
+    public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody LoginRequest request) {
+        JwtResponseDTO response = profileService.login(request);
         return ResponseEntity.ok(response);
     }
 

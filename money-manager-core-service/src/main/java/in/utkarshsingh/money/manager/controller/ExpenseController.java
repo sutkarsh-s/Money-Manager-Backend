@@ -1,7 +1,9 @@
 package in.utkarshsingh.money.manager.controller;
 
 import in.utkarshsingh.money.manager.dto.ExpenseDTO;
+import in.utkarshsingh.money.manager.dto.request.ExpenseRequest;
 import in.utkarshsingh.money.manager.service.ExpenseService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +19,8 @@ public class ExpenseController {
     private final ExpenseService expenseService;
 
     @PostMapping
-    public ResponseEntity<ExpenseDTO> addExpense(@RequestBody ExpenseDTO dto) {
-        ExpenseDTO saved = expenseService.addExpense(dto);
+    public ResponseEntity<ExpenseDTO> addExpense(@Valid @RequestBody ExpenseRequest request) {
+        ExpenseDTO saved = expenseService.addExpense(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 

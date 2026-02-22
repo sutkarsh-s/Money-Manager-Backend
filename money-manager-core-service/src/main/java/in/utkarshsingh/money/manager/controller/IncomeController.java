@@ -1,7 +1,9 @@
 package in.utkarshsingh.money.manager.controller;
 
 import in.utkarshsingh.money.manager.dto.IncomeDTO;
+import in.utkarshsingh.money.manager.dto.request.IncomeRequest;
 import in.utkarshsingh.money.manager.service.IncomeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,15 +19,15 @@ public class IncomeController {
     private final IncomeService incomeService;
 
     @PostMapping
-    public ResponseEntity<IncomeDTO> addExpense(@RequestBody IncomeDTO dto) {
-        IncomeDTO saved = incomeService.addIncome(dto);
+    public ResponseEntity<IncomeDTO> addIncome(@Valid @RequestBody IncomeRequest request) {
+        IncomeDTO saved = incomeService.addIncome(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @GetMapping
-    public ResponseEntity<List<IncomeDTO>> getExpenses() {
-        List<IncomeDTO> expenses = incomeService.getCurrentMonthIncomesForCurrentUser();
-        return ResponseEntity.ok(expenses);
+    public ResponseEntity<List<IncomeDTO>> getIncomes() {
+        List<IncomeDTO> incomes = incomeService.getCurrentMonthIncomesForCurrentUser();
+        return ResponseEntity.ok(incomes);
     }
 
     @DeleteMapping("/{id}")
