@@ -1,43 +1,42 @@
 package in.utkarshsingh.money.manager.controller;
 
-import in.utkarshsingh.money.manager.dto.JwtResponseDTO;
 import in.utkarshsingh.money.manager.dto.ProfileDTO;
-import in.utkarshsingh.money.manager.dto.request.LoginRequest;
-import in.utkarshsingh.money.manager.dto.request.RegisterRequest;
+import in.utkarshsingh.money.manager.dto.request.ChangePasswordRequest;
+import in.utkarshsingh.money.manager.dto.request.UpdateProfileRequest;
 import in.utkarshsingh.money.manager.service.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequestMapping("/profile")
 @RequiredArgsConstructor
 public class ProfileController {
 
     private final ProfileService profileService;
 
-    @PostMapping("/register")
-    public ResponseEntity<ProfileDTO> registerProfile(@Valid @RequestBody RegisterRequest request) {
-        ProfileDTO registeredProfile = profileService.registerProfile(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(registeredProfile);
-    }
-
-    @GetMapping("/activate")
-    public ResponseEntity<String> activateProfile(@RequestParam String token) {
-        profileService.activateProfile(token);
-        return ResponseEntity.ok("Profile activated successfully");
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody LoginRequest request) {
-        JwtResponseDTO response = profileService.login(request);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/profile")
-    public ResponseEntity<ProfileDTO> getPublicProfile() {
+    @GetMapping
+    public ResponseEntity<ProfileDTO> getProfile() {
         ProfileDTO profileDTO = profileService.getPublicProfile(null);
         return ResponseEntity.ok(profileDTO);
+    }
+
+    @PutMapping
+    public ResponseEntity<ProfileDTO> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        ProfileDTO updatedProfile = profileService.updateProfile(request);
+        return ResponseEntity.ok(updatedProfile);
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        profileService.changePassword(request);
+        return ResponseEntity.ok("Password changed successfully");
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAccount() {
+        profileService.deleteAccount();
+        return ResponseEntity.noContent().build();
     }
 }

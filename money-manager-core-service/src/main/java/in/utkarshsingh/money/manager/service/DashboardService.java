@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -20,6 +21,9 @@ public class DashboardService {
     private final IncomeService incomeService;
     private final ExpenseService expenseService;
     private final ProfileService profileService;
+    private final SavingsGoalService savingsGoalService;
+    private final InvestmentService investmentService;
+    private final DebtService debtService;
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboardData() {
@@ -27,14 +31,24 @@ public class DashboardService {
 
         List<IncomeDTO> latestIncomes = incomeService.getLatest5IncomesForCurrentUser();
         List<ExpenseDTO> latestExpenses = expenseService.getLatest5ExpensesForCurrentUser();
-
         List<RecentTransactionDTO> recentTransactions = buildRecentTransactions(profile.getId(), latestIncomes, latestExpenses);
 
+        BigDecimal totalIncome = incomeService.getTotalIncomeForCurrentUser();
+        BigDecimal totalExpense = expenseService.getTotalExpenseForCurrentUser();
+        BigDecimal totalSavings = savingsGoalService.getTotalSaved();
+        BigDecimal totalInvestments = investmentService.getTotalCurrentValue();
+        BigDecimal totalDebt = debtService.getTotalDebt();
+        BigDecimal cashBalance = totalIncome.subtract(totalExpense);
+        BigDecimal netWorth = cashBalance.add(totalSavings).add(totalInvestments).subtract(totalDebt);
+
         return DashboardResponse.builder()
-                .totalBalance(incomeService.getTotalIncomeForCurrentUser()
-                        .subtract(expenseService.getTotalExpenseForCurrentUser()))
-                .totalIncome(incomeService.getTotalIncomeForCurrentUser())
-                .totalExpense(expenseService.getTotalExpenseForCurrentUser())
+                .totalBalance(cashBalance)
+                .totalIncome(totalIncome)
+                .totalExpense(totalExpense)
+                .totalSavings(totalSavings)
+                .totalInvestments(totalInvestments)
+                .totalDebt(totalDebt)
+                .netWorth(netWorth)
                 .recent5Incomes(latestIncomes)
                 .recent5Expenses(latestExpenses)
                 .recentTransactions(recentTransactions)
@@ -46,27 +60,15 @@ public class DashboardService {
                                                                List<ExpenseDTO> expenses) {
         return Stream.concat(
                 incomes.stream().map(i -> RecentTransactionDTO.builder()
-                        .id(i.getId())
-                        .profileId(profileId)
-                        .icon(i.getIcon())
-                        .name(i.getName())
-                        .amount(i.getAmount())
-                        .date(i.getDate())
-                        .createdAt(i.getCreatedAt())
-                        .updatedAt(i.getUpdatedAt())
-                        .type("income")
-                        .build()),
+                        .id(i.getId()).profileId(profileId).icon(i.getIcon())
+                        .name(i.getName()).amount(i.getAmount()).date(i.getDate())
+                        .createdAt(i.getCreatedAt()).updatedAt(i.getUpdatedAt())
+                        .type("income").build()),
                 expenses.stream().map(e -> RecentTransactionDTO.builder()
-                        .id(e.getId())
-                        .profileId(profileId)
-                        .icon(e.getIcon())
-                        .name(e.getName())
-                        .amount(e.getAmount())
-                        .date(e.getDate())
-                        .createdAt(e.getCreatedAt())
-                        .updatedAt(e.getUpdatedAt())
-                        .type("expense")
-                        .build())
+                        .id(e.getId()).profileId(profileId).icon(e.getIcon())
+                        .name(e.getName()).amount(e.getAmount()).date(e.getDate())
+                        .createdAt(e.getCreatedAt()).updatedAt(e.getUpdatedAt())
+                        .type("expense").build())
         ).sorted(Comparator.comparing(RecentTransactionDTO::getDate)
                 .thenComparing(RecentTransactionDTO::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
                 .reversed()

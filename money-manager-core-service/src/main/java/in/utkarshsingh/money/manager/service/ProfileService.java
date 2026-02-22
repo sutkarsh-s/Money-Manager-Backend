@@ -4,15 +4,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import in.utkarshsingh.money.manager.dto.JwtResponseDTO;
 import in.utkarshsingh.money.manager.dto.ProfileDTO;
+import in.utkarshsingh.money.manager.dto.request.ChangePasswordRequest;
 import in.utkarshsingh.money.manager.dto.request.LoginRequest;
 import in.utkarshsingh.money.manager.dto.request.RegisterRequest;
+import in.utkarshsingh.money.manager.dto.request.UpdateProfileRequest;
 import in.utkarshsingh.money.manager.entity.ProfileEntity;
 import in.utkarshsingh.money.manager.event.ProfileActivationEvent;
 import in.utkarshsingh.money.manager.exceptions.*;
 import in.utkarshsingh.money.manager.domain.OutboxEventFactory;
 import in.utkarshsingh.money.manager.mapper.ProfileMapper;
 import in.utkarshsingh.money.manager.port.OutboxEventStore;
-import in.utkarshsingh.money.manager.repository.ProfileRepository;
+import in.utkarshsingh.money.manager.repository.*;
 import in.utkarshsingh.money.manager.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +43,15 @@ public class ProfileService {
     private final OutboxEventFactory outboxEventFactory;
     private final ObjectMapper objectMapper;
     private final ProfileMapper profileMapper;
+    private final IncomeRepository incomeRepository;
+    private final ExpenseRepository expenseRepository;
+    private final CategoryRepository categoryRepository;
+    private final BudgetRepository budgetRepository;
+    private final RecurringTransactionRepository recurringTransactionRepository;
+    private final SavingsGoalRepository savingsGoalRepository;
+    private final InvestmentRepository investmentRepository;
+    private final DebtRepository debtRepository;
+    private final LendBorrowRepository lendBorrowRepository;
 
     @Transactional
     public ProfileDTO registerProfile(RegisterRequest request) {
@@ -117,6 +128,55 @@ public class ProfileService {
                     .orElseThrow(() -> new UserNotFoundException(email));
         }
         return profileMapper.toDTO(profile);
+    }
+
+    @Transactional
+    public ProfileDTO updateProfile(UpdateProfileRequest request) {
+        ProfileEntity profile = getCurrentProfile();
+        log.info("Updating profile for user: {}", profile.getEmail());
+
+        profile.setFullName(request.getFullName().trim());
+        if (request.getProfileImageUrl() != null) {
+            profile.setProfileImageUrl(request.getProfileImageUrl());
+        }
+
+        profile = profileRepository.save(profile);
+        log.info("Profile updated successfully for user: {}", profile.getEmail());
+        return profileMapper.toDTO(profile);
+    }
+
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        ProfileEntity profile = getCurrentProfile();
+        log.info("Password change requested for user: {}", profile.getEmail());
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), profile.getPassword())) {
+            throw new InvalidPasswordException();
+        }
+
+        profile.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        profileRepository.save(profile);
+        log.info("Password changed successfully for user: {}", profile.getEmail());
+    }
+
+    @Transactional
+    public void deleteAccount() {
+        ProfileEntity profile = getCurrentProfile();
+        Long profileId = profile.getId();
+        log.info("Account deletion requested for user: {}", profile.getEmail());
+
+        incomeRepository.deleteAllByProfileId(profileId);
+        expenseRepository.deleteAllByProfileId(profileId);
+        lendBorrowRepository.deleteAllByProfileId(profileId);
+        budgetRepository.deleteAllByProfileId(profileId);
+        recurringTransactionRepository.deleteAllByProfileId(profileId);
+        savingsGoalRepository.deleteAllByProfileId(profileId);
+        investmentRepository.deleteAllByProfileId(profileId);
+        debtRepository.deleteAllByProfileId(profileId);
+        categoryRepository.deleteAllByProfileId(profileId);
+        profileRepository.delete(profile);
+
+        log.info("Account deleted successfully for profileId: {}", profileId);
     }
 
     private void authenticateUser(String email, String password) {
