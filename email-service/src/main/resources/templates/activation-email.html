@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f7;padding:40px 0;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+                <tr>
+                    <td style="background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 50%,#4c1d95 100%);padding:32px;text-align:center;">
+                        <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:700;">Money Manager</h1>
+                        <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">Your personal finance companion</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:36px 32px;">
+                        <h2 style="color:#1f2937;margin:0 0 16px;font-size:22px;">Welcome, <span th:text="${fullName}">User</span>!</h2>
+                        <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 24px;">
+                            Thank you for creating your Money Manager account. To get started, please activate your account by clicking the button below.
+                        </p>
+                        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
+                            <tr>
+                                <td style="border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);">
+                                    <a th:href="${activationLink}" style="display:inline-block;padding:14px 36px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;">
+                                        Activate My Account
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                        <p style="color:#6b7280;font-size:13px;line-height:1.5;margin:24px 0 0;">
+                            This link expires in <strong>24 hours</strong>. If you did not create this account, you can safely ignore this email.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #e5e7eb;">
+                        <p style="color:#9ca3af;font-size:12px;margin:0;">
+                            &copy; 2026 Money Manager. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

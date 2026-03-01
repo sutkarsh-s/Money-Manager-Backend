@@ -1,0 +1,118 @@
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET}
+
+money:
+  manager:
+    frontend:
+      urls: ${FRONTEND_URLS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
+      url: ${FRONTEND_URL:http://localhost:5173}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # Auth Service
+        - id: auth-register
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/v1/register
+        - id: auth-login
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/v1/login
+        - id: auth-activate
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/v1/activate
+        - id: auth-profile
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/v1/profile/**
+        - id: auth-profile-base
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/v1/profile
+
+        # Transaction Service
+        - id: txn-incomes
+          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/incomes/**
+        - id: txn-expenses
+          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/expenses/**
+        - id: txn-categories
+          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/categories/**
+        - id: txn-filter
+          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/transactions/filter/**
+        - id: txn-recurring
+          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/recurring-transactions/**
+        - id: txn-lending
+          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/lend-borrow/**
+        - id: txn-support
+          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/v1/support/**
+
+        # Planning Service
+        - id: plan-budgets
+          uri: http://${PLANNING_SERVICE_HOST:localhost}:8083
+          predicates:
+            - Path=/api/v1/budgets/**
+        - id: plan-savings
+          uri: http://${PLANNING_SERVICE_HOST:localhost}:8083
+          predicates:
+            - Path=/api/v1/savings-goals/**
+        - id: plan-debts
+          uri: http://${PLANNING_SERVICE_HOST:localhost}:8083
+          predicates:
+            - Path=/api/v1/debts/**
+
+        # Investment Service
+        - id: invest
+          uri: http://${INVESTMENT_SERVICE_HOST:localhost}:8084
+          predicates:
+            - Path=/api/v1/investments/**
+
+        # Analytics Service
+        - id: analytics-dashboard
+          uri: http://${ANALYTICS_SERVICE_HOST:localhost}:8086
+          predicates:
+            - Path=/api/v1/dashboard/**
+        - id: analytics-main
+          uri: http://${ANALYTICS_SERVICE_HOST:localhost}:8086
+          predicates:
+            - Path=/api/v1/analytics/**
+        - id: analytics-reports
+          uri: http://${ANALYTICS_SERVICE_HOST:localhost}:8086
+          predicates:
+            - Path=/api/v1/reports/**
+        # AI Service
+        - id: ai-service
+          uri: http://${AI_SERVICE_HOST:localhost}:8087
+          predicates:
+            - Path=/api/v1/ai/**
+
+        # Health endpoints
+        - id: health
+          uri: http://localhost:${server.port}
+          predicates:
+            - Path=/api/health,/api/status
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

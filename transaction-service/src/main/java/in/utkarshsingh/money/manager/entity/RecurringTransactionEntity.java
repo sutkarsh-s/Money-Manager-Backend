@@ -1,0 +1,55 @@
+package in.utkarshsingh.money.manager.entity;
+
+import in.utkarshsingh.money.manager.enums.TransactionFrequency;
+import in.utkarshsingh.money.manager.enums.TransactionType;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Entity
+@Table(name = "tbl_recurring_transactions")
+public class RecurringTransactionEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @Column(nullable = false, length = 255)
+    private String name;
+    @Column(length = 50)
+    private String icon;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal amount;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private TransactionType type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private TransactionFrequency frequency;
+    @Column(nullable = false)
+    private LocalDate startDate;
+    private LocalDate endDate;
+    @Column(nullable = false)
+    private LocalDate nextExecutionDate;
+    @Column(nullable = false)
+    private Boolean isActive;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private CategoryEntity category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_id", nullable = false)
+    private ProfileEntity profile;
+    @Column(updatable = false)
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+    @PrePersist
+    public void prePersist() { if (this.isActive == null) this.isActive = true; if (this.nextExecutionDate == null) this.nextExecutionDate = this.startDate; }
+}

@@ -8,41 +8,181 @@ services:
       MYSQL_USER: ${MYSQL_DB_USERNAME}
       MYSQL_PASSWORD: ${MYSQL_DB_PASSWORD}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - mm-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: rabbitmq-money_manager
+    container_name: rabbitmq-money-manager
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
+    networks:
+      - mm-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      retries: 5
 
-  core-service:
-    build: ./money-manager-core-service
+  api-gateway:
+    build: ./api-gateway
+    container_name: mm-api-gateway
     env_file:
       - .env
+    environment:
+      AUTH_SERVICE_HOST: auth-service
+      TRANSACTION_SERVICE_HOST: transaction-service
+      PLANNING_SERVICE_HOST: planning-service
+      INVESTMENT_SERVICE_HOST: investment-service
+      ANALYTICS_SERVICE_HOST: analytics-service
+      AI_SERVICE_HOST: ai-service
     ports:
       - "8080:8080"
     depends_on:
-      - mysql
-      - rabbitmq
+      - auth-service
+      - transaction-service
+      - planning-service
+      - investment-service
+      - analytics-service
+    networks:
+      - mm-network
 
-
-  email-service:
-    build: ./email-service
+  auth-service:
+    build: ./auth-service
+    container_name: mm-auth-service
     env_file:
       - .env
+    environment:
+      MYSQL_HOST: mysql
+      RABBITMQ_HOST: rabbitmq
     ports:
       - "8081:8081"
     depends_on:
-      - mysql
-      - rabbitmq
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - mm-network
 
+  transaction-service:
+    build: ./transaction-service
+    container_name: mm-transaction-service
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: mysql
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - mm-network
+
+  planning-service:
+    build: ./planning-service
+    container_name: mm-planning-service
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: mysql
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - mm-network
+
+  investment-service:
+    build: ./investment-service
+    container_name: mm-investment-service
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: mysql
+    ports:
+      - "8084:8084"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - mm-network
+
+  banking-service:
+    build: ./banking-service
+    container_name: mm-banking-service
+    env_file:
+      - .env
+    ports:
+      - "8085:8085"
+    networks:
+      - mm-network
+
+  analytics-service:
+    build: ./analytics-service
+    container_name: mm-analytics-service
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: mysql
+    ports:
+      - "8086:8086"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - mm-network
+
+  ai-service:
+    build: ./ai-service
+    container_name: mm-ai-service
+    env_file:
+      - .env
+    ports:
+      - "8087:8087"
+    networks:
+      - mm-network
+
+  notification-service:
+    build: ./notification-service
+    container_name: mm-notification-service
+    env_file:
+      - .env
+    ports:
+      - "8088:8088"
+    networks:
+      - mm-network
+
+  email-service:
+    build: ./email-service
+    container_name: mm-email-service
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    ports:
+      - "8089:8089"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - mm-network
 
 volumes:
   mysql_data:
+
+networks:
+  mm-network:
+    driver: bridge
